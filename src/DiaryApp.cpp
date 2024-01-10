@@ -1,12 +1,67 @@
+// DiaryApp.cpp
+#include "DiaryApp.h"
 #include <iostream>
 #include <sqlite3.h>
+#include <chrono>
+#include <ctime>
 
-// SQLite3 数据库文件
-const char* DB_FILE = "diary.db";
+DiaryApp::DiaryApp(const char *dbFile) : DB_FILE(dbFile) {
+    initializeDatabase();
+}
 
-// 初始化数据库
-void initializeDatabase() {
-    sqlite3* db;
+void DiaryApp::displayMenu() {
+    std::cout << "Choose an option:" << std::endl;
+    std::cout << "1. Add Diary Entry" << std::endl;
+    std::cout << "2. View Diary Entries" << std::endl;
+    std::cout << "3. Delete Diary Entry" << std::endl;
+    std::cout << "4. Clear" << std::endl;
+    std::cout << "5. Exit" << std::endl;
+}
+
+int DiaryApp::startup() {
+    displayMenu();
+    while (true) {
+        int choice;
+        std::cin >> choice;
+
+        switch (choice) {
+            case 1:
+                addEntry();
+                break;
+            case 2:
+                viewEntries();
+                break;
+            case 3:
+                deleteEntry();
+                break;
+            case 4:
+                clearConsole();
+                displayMenu();
+                break;
+            case 5:
+                std::cout << "Exiting the diary application." << std::endl;
+                return 0;
+            default:
+                std::cout << "Invalid choice. Try again." << std::endl;
+                break;
+        }
+    }
+
+    return 0;
+}
+
+std::string DiaryApp::getTime() {
+    auto currentTime = std::chrono::system_clock::now();
+    std::time_t currentTime_t = std::chrono::system_clock::to_time_t(currentTime);
+    std::tm* timeinfo = std::localtime(&currentTime_t);
+
+    char buffer[80];
+    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
+    return buffer;
+}
+
+void DiaryApp::initializeDatabase() {
+    sqlite3 *db;
     int result = sqlite3_open(DB_FILE, &db);
 
     if (result != SQLITE_OK) {
@@ -14,7 +69,7 @@ void initializeDatabase() {
         exit(EXIT_FAILURE);
     }
 
-    const char* createTableSQL = "CREATE TABLE IF NOT EXISTS diary_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, entry TEXT);";
+    const char *createTableSQL = "CREATE TABLE IF NOT EXISTS diary_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, entry TEXT);";
 
     result = sqlite3_exec(db, createTableSQL, nullptr, nullptr, nullptr);
     if (result != SQLITE_OK) {
@@ -26,15 +81,20 @@ void initializeDatabase() {
     sqlite3_close(db);
 }
 
-// 添加日记条目
-void addEntry(const std::string& entry) {
-    sqlite3* db;
+void DiaryApp::addEntry() {
+    sqlite3 *db;
     int result = sqlite3_open(DB_FILE, &db);
 
     if (result != SQLITE_OK) {
         std::cerr << "Error opening SQLite3 database: " << sqlite3_errmsg(db) << std::endl;
         exit(EXIT_FAILURE);
     }
+
+    std::string entry;
+    std::cin.ignore(); // Ignore newline from previous input
+    std::cout << "Enter your diary entry:" << std::endl;
+    std::getline(std::cin, entry);
+    entry = entry + " RECORDTIME:" + getTime();
 
     std::string insertSQL = "INSERT INTO diary_entries (entry) VALUES ('" + entry + "');";
     result = sqlite3_exec(db, insertSQL.c_str(), nullptr, nullptr, nullptr);
@@ -48,9 +108,8 @@ void addEntry(const std::string& entry) {
     sqlite3_close(db);
 }
 
-// 查看所有日记条目
-void viewEntries() {
-    sqlite3* db;
+void DiaryApp::viewEntries() {
+    sqlite3 *db;
     int result = sqlite3_open(DB_FILE, &db);
 
     if (result != SQLITE_OK) {
@@ -58,8 +117,8 @@ void viewEntries() {
         exit(EXIT_FAILURE);
     }
 
-    const char* selectSQL = "SELECT * FROM diary_entries;";
-    sqlite3_stmt* statement;
+    const char *selectSQL = "SELECT * FROM diary_entries;";
+    sqlite3_stmt *statement;
 
     result = sqlite3_prepare_v2(db, selectSQL, -1, &statement, nullptr);
     if (result != SQLITE_OK) {
@@ -78,15 +137,18 @@ void viewEntries() {
     sqlite3_close(db);
 }
 
-// 删除日记条目
-void deleteEntry(int entryId) {
-    sqlite3* db;
+void DiaryApp::deleteEntry() {
+    sqlite3 *db;
     int result = sqlite3_open(DB_FILE, &db);
 
     if (result != SQLITE_OK) {
         std::cerr << "Error opening SQLite3 database: " << sqlite3_errmsg(db) << std::endl;
         exit(EXIT_FAILURE);
     }
+
+    int entryId;
+    std::cout << "Enter the ID of the entry you want to delete:" << std::endl;
+    std::cin >> entryId;
 
     std::string deleteSQL = "DELETE FROM diary_entries WHERE id = " + std::to_string(entryId) + ";";
     result = sqlite3_exec(db, deleteSQL.c_str(), nullptr, nullptr, nullptr);
@@ -102,46 +164,7 @@ void deleteEntry(int entryId) {
     sqlite3_close(db);
 }
 
-int main() {
-    initializeDatabase();
-
-    while (true) {
-        std::cout << "Choose an option:" << std::endl;
-        std::cout << "1. Add Diary Entry" << std::endl;
-        std::cout << "2. View Diary Entries" << std::endl;
-        std::cout << "3. Delete Diary Entry" << std::endl;
-        std::cout << "4. Exit" << std::endl;
-
-        int choice;
-        std::cin >> choice;
-
-        switch (choice) {
-            case 1: {
-                std::cin.ignore(); // Ignore newline from previous input
-                std::string entry;
-                std::cout << "Enter your diary entry:" << std::endl;
-                std::getline(std::cin, entry);
-                addEntry(entry);
-                break;
-            }
-            case 2:
-                viewEntries();
-                break;
-            case 3: {
-                std::cout << "Enter the ID of the entry you want to delete:" << std::endl;
-                int entryId;
-                std::cin >> entryId;
-                deleteEntry(entryId);
-                break;
-            }
-            case 4:
-                std::cout << "Exiting the diary application." << std::endl;
-                return 0;
-            default:
-                std::cout << "Invalid choice. Try again." << std::endl;
-                break;
-        }
-    }
-
-    return 0;
+void DiaryApp::clearConsole() {
+    // ANSI escape code to clear the screen
+    std::cout << "\033[2J\033[H";
 }
