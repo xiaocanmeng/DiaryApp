@@ -32,6 +32,8 @@ int DiaryApp::startup()
         {
         case 1:
             addEntry();
+            // clearConsole();
+            // displayMenu();
             break;
         case 2:
             viewEntries();
@@ -122,6 +124,10 @@ void DiaryApp::addEntry()
         sqlite3_close(db);
         exit(EXIT_FAILURE);
     }
+    else
+    {
+        std::cout << "Add Success" << std::endl;
+    }
 
     sqlite3_close(db);
 }
@@ -158,7 +164,7 @@ void DiaryApp::viewEntries()
         const char *priorityText = reinterpret_cast<const char *>(sqlite3_column_text(statement, 2));
         const char *timeText = reinterpret_cast<const char *>(sqlite3_column_text(statement, 3));
 
-        std::cout << " - Entry: " << entryText
+        std::cout << "ID: "<< id << "- Thing: " << entryText
                   << " - Priority: " << priorityText << " - Time: " << timeText << std::endl;
     }
 
