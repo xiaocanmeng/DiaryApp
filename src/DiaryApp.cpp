@@ -62,7 +62,7 @@ std::string DiaryApp::getTime()
     std::tm *timeinfo = std::localtime(&currentTime_t);
 
     char buffer[80];
-    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
+    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d", timeinfo);
     return std::string(buffer);
 }
 
@@ -158,7 +158,7 @@ void DiaryApp::viewEntries()
         const char *priorityText = reinterpret_cast<const char *>(sqlite3_column_text(statement, 2));
         const char *timeText = reinterpret_cast<const char *>(sqlite3_column_text(statement, 3));
 
-        std::cout << "ID: " << id << " - Entry: " << entryText
+        std::cout << " - Entry: " << entryText
                   << " - Priority: " << priorityText << " - Time: " << timeText << std::endl;
     }
 
