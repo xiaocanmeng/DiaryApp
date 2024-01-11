@@ -4,11 +4,15 @@
 #include <sqlite3.h>
 #include <chrono>
 #include <ctime>
+#include "DBoperation.h"
 
 DiaryApp::DiaryApp(const char *dbFile) : DB_FILE(dbFile)
 {
-    initializeDatabase();
+    initializeDatabase(DB_FILE);
+    std::string suffixBACKUP{"backup.db"};
+    DB_BACKUPFILE = DB_FILE + suffixBACKUP;
 }
+
 
 void DiaryApp::displayMenu()
 {
@@ -17,7 +21,9 @@ void DiaryApp::displayMenu()
     std::cout << "2. View Diary Entries" << std::endl;
     std::cout << "3. Delete Diary Entry" << std::endl;
     std::cout << "4. Clear" << std::endl;
-    std::cout << "5. Exit" << std::endl;
+    std::cout << "5. DeleteALL" << std::endl;
+    std::cout << "6. Restore" << std::endl;
+    std::cout << "7. Exit" << std::endl;
 }
 
 int DiaryApp::startup()
@@ -26,7 +32,17 @@ int DiaryApp::startup()
     while (true)
     {
         int choice;
-        std::cin >> choice;
+        
+
+        // 检查输入流状态
+        if (!(std::cin >> choice))
+        {
+            // 输入不是整数，清除错误状态并清空输入缓冲区
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input. Please enter a number.\n";
+            continue; // 跳过本次循环，重新获取输入
+        }
 
         switch (choice)
         {
@@ -46,8 +62,18 @@ int DiaryApp::startup()
             displayMenu();
             break;
         case 5:
-            std::cout << "Exiting the diary application." << std::endl;
-            return 0;
+            backupDiary();
+            clearAllEntries(DB_FILE);
+            break;
+        case 6:
+            restoreDatabase(DB_BACKUPFILE, DB_FILE);
+            break;
+        case 7:
+            {
+                backupDiary();
+                std::cout << "Exiting the diary application." << std::endl;
+                return 0;
+            }
         default:
             std::cout << "Invalid choice. Try again." << std::endl;
             break;
@@ -55,6 +81,20 @@ int DiaryApp::startup()
     }
 
     return 0;
+}
+
+void DiaryApp::backupDiary()
+{
+    // 调用备份函数
+    initializeDatabase(DB_FILE);
+    if (backupSQLiteDatabase(DB_FILE, DB_BACKUPFILE))
+    {
+        std::cout << "Database backup successful\n";
+    }
+    else
+    {
+        std::cerr << "Database backup failed\n";
+    }
 }
 
 std::string DiaryApp::getTime()
@@ -68,29 +108,6 @@ std::string DiaryApp::getTime()
     return std::string(buffer);
 }
 
-void DiaryApp::initializeDatabase()
-{
-    sqlite3 *db;
-    int result = sqlite3_open(DB_FILE, &db);
-
-    if (result != SQLITE_OK)
-    {
-        std::cerr << "Error opening SQLite3 database: " << sqlite3_errmsg(db) << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    const char *createTableSQL = "CREATE TABLE IF NOT EXISTS diary_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, entry TEXT, priority TEXT, time TEXT);";
-
-    result = sqlite3_exec(db, createTableSQL, nullptr, nullptr, nullptr);
-    if (result != SQLITE_OK)
-    {
-        std::cerr << "Error creating table: " << sqlite3_errmsg(db) << std::endl;
-        sqlite3_close(db);
-        exit(EXIT_FAILURE);
-    }
-
-    sqlite3_close(db);
-}
 
 void DiaryApp::addEntry()
 {
@@ -164,7 +181,7 @@ void DiaryApp::viewEntries()
         const char *priorityText = reinterpret_cast<const char *>(sqlite3_column_text(statement, 2));
         const char *timeText = reinterpret_cast<const char *>(sqlite3_column_text(statement, 3));
 
-        std::cout << "ID: "<< id << "- Thing: " << entryText
+        std::cout << "ID: " << id << "- Thing: " << entryText
                   << " - Priority: " << priorityText << " - Time: " << timeText << std::endl;
     }
 

@@ -12,12 +12,13 @@ public:
 
 private:
     const char *DB_FILE;
+    std::string DB_BACKUPFILE;
     std::string getTime();
-    void initializeDatabase();
     void addEntry();
     void viewEntries();
     void deleteEntry();
     void clearConsole();
+    void backupDiary();
 };
 
 #endif  // DIARYAPP_H
