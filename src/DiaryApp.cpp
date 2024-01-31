@@ -5,8 +5,9 @@
 #include <chrono>
 #include <ctime>
 #include "DBoperation.h"
+#include <SQLiteCpp/SQLiteCpp.h>
 
-DiaryApp::DiaryApp(const char *dbFile) : DB_FILE(dbFile)
+DiaryApp::DiaryApp(std::string dbFile) : DB_FILE(dbFile)
 {
     initializeDatabase(DB_FILE);
     std::string suffixBACKUP{"backup.db"};
@@ -49,7 +50,7 @@ int DiaryApp::startup()
         case 1:
             addEntry();
             // clearConsole();
-            // displayMenu();
+            displayMenu();
             break;
         case 2:
             viewEntries();
@@ -86,7 +87,7 @@ int DiaryApp::startup()
 void DiaryApp::backupDiary()
 {
     // 调用备份函数
-    initializeDatabase(DB_FILE);
+    initializeDatabase(DB_BACKUPFILE);
     if (backupSQLiteDatabase(DB_FILE, DB_BACKUPFILE))
     {
         std::cout << "Database backup successful\n";
@@ -109,50 +110,44 @@ std::string DiaryApp::getTime()
 }
 
 
-void DiaryApp::addEntry()
-{
-    sqlite3 *db;
-    int result = sqlite3_open(DB_FILE, &db);
+void DiaryApp::addEntry() {
+    try {
+        // Open the SQLite database
+        SQLite::Database db(DB_FILE, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
 
-    if (result != SQLITE_OK)
-    {
-        std::cerr << "Error opening SQLite3 database: " << sqlite3_errmsg(db) << std::endl;
-        exit(EXIT_FAILURE);
-    }
+        std::string entry;
+        std::cin.ignore(); // Ignore newline from previous input
+        std::cout << "Enter your diary entry:" << std::endl;
+        std::getline(std::cin, entry);
 
-    std::string entry;
-    std::cin.ignore(); // Ignore newline from previous input
-    std::cout << "Enter your diary entry:" << std::endl;
-    std::getline(std::cin, entry);
+        std::cout << "Enter your diary priority:" << std::endl;
+        std::cout << "1. Low" << std::endl;
+        std::cout << "2. Medium" << std::endl;
+        std::cout << "3. High" << std::endl;
+        std::string priority[3]{"Low", "Medium", "High"};
+        int32_t index{};
+        std::cin >> index;
 
-    std::cout << "Enter your diary priority:" << std::endl;
-    std::cout << "1. Low" << std::endl;
-    std::cout << "2. Medium" << std::endl;
-    std::cout << "3. High" << std::endl;
-    std::string priority[3]{"Low", "Medium", "High"};
-    int32_t index{};
-    std::cin >> index;
-    std::string insertSQL = "INSERT INTO diary_entries (entry, priority, time) VALUES ('" + entry + "', '" + priority[index - 1] + "', '" + getTime() + "');";
-    result = sqlite3_exec(db, insertSQL.c_str(), nullptr, nullptr, nullptr);
+        // Prepare the SQL statement
+        SQLite::Statement query(db, "INSERT INTO diary_entries (entry, priority, time) VALUES (?, ?, ?);");
+        query.bind(1, entry);
+        query.bind(2, priority[index - 1]);
+        query.bind(3, getTime());
 
-    if (result != SQLITE_OK)
-    {
-        std::cerr << "Error inserting entry: " << sqlite3_errmsg(db) << std::endl;
-        sqlite3_close(db);
-        exit(EXIT_FAILURE);
-    }
-    else
-    {
+        // Execute the SQL statement
+        query.exec();
+
         std::cout << "Add Success" << std::endl;
+    } catch (std::exception &e) {
+        std::cerr << "Error inserting entry: " << e.what() << std::endl;
+        exit(EXIT_FAILURE);
     }
-
-    sqlite3_close(db);
 }
 
 void DiaryApp::viewEntries()
 {
     sqlite3 *db;
-    int result = sqlite3_open(DB_FILE, &db);
+    int result = sqlite3_open(DB_FILE.c_str(), &db);
 
     if (result != SQLITE_OK)
     {
@@ -192,7 +187,7 @@ void DiaryApp::viewEntries()
 void DiaryApp::deleteEntry()
 {
     sqlite3 *db;
-    int result = sqlite3_open(DB_FILE, &db);
+    int result = sqlite3_open(DB_FILE.c_str(), &db);
 
     if (result != SQLITE_OK)
     {

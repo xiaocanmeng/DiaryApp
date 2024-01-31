@@ -6,12 +6,12 @@
 
 class DiaryApp {
 public:
-    DiaryApp(const char *dbFile);
+    DiaryApp(std::string dbFile);
     void displayMenu();
     int startup();
 
 private:
-    const char *DB_FILE;
+    std::string DB_FILE;
     std::string DB_BACKUPFILE;
     std::string getTime();
     void addEntry();
