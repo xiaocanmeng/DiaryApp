@@ -109,9 +109,10 @@ std::string DiaryApp::getTime()
     return std::string(buffer);
 }
 
-
-void DiaryApp::addEntry() {
-    try {
+void DiaryApp::addEntry()
+{
+    try
+    {
         // Open the SQLite database
         SQLite::Database db(DB_FILE, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
 
@@ -138,7 +139,9 @@ void DiaryApp::addEntry() {
         query.exec();
 
         std::cout << "Add Success" << std::endl;
-    } catch (std::exception &e) {
+    }
+    catch (std::exception &e)
+    {
         std::cerr << "Error inserting entry: " << e.what() << std::endl;
         exit(EXIT_FAILURE);
     }
@@ -146,72 +149,58 @@ void DiaryApp::addEntry() {
 
 void DiaryApp::viewEntries()
 {
-    sqlite3 *db;
-    int result = sqlite3_open(DB_FILE.c_str(), &db);
-
-    if (result != SQLITE_OK)
+    try
     {
-        std::cerr << "Error opening SQLite3 database: " << sqlite3_errmsg(db) << std::endl;
+        // 打开 SQLite 数据库
+        SQLite::Database db(DB_FILE, SQLite::OPEN_READONLY);
+
+        // 准备 SQL 语句
+        const char *selectSQL = "SELECT * FROM diary_entries ORDER BY CASE priority WHEN 'High' THEN 0 WHEN 'Medium' THEN 1 WHEN 'Low' THEN 2 ELSE 3 END, time ASC;";
+        SQLite::Statement query(db, selectSQL);
+
+        std::cout << "Diary Entries:" << std::endl;
+
+        // 遍历查询结果并输出
+        while (query.executeStep())
+        {
+            int id = query.getColumn(0);
+            std::string entryText = query.getColumn(1);
+            std::string priorityText = query.getColumn(2);
+            std::string timeText = query.getColumn(3);
+
+            std::cout << "ID: " << id << "- Thing: " << entryText
+                      << " - Priority: " << priorityText << " - Time: " << timeText << std::endl;
+        }
+    }
+    catch (std::exception &e)
+    {
+        std::cerr << "查询日记时发生错误：" << e.what() << std::endl;
         exit(EXIT_FAILURE);
     }
-
-    const char *selectSQL = "SELECT * FROM diary_entries ORDER BY CASE priority WHEN 'High' THEN 0 WHEN 'Medium' THEN 1 WHEN 'Low' THEN 2 ELSE 3 END, time ASC;";
-
-    sqlite3_stmt *statement;
-
-    result = sqlite3_prepare_v2(db, selectSQL, -1, &statement, nullptr);
-    if (result != SQLITE_OK)
-    {
-        std::cerr << "Error preparing statement: " << sqlite3_errmsg(db) << std::endl;
-        sqlite3_close(db);
-        exit(EXIT_FAILURE);
-    }
-
-    std::cout << "Diary Entries:" << std::endl;
-
-    while ((result = sqlite3_step(statement)) == SQLITE_ROW)
-    {
-        int id = sqlite3_column_int(statement, 0);
-        const char *entryText = reinterpret_cast<const char *>(sqlite3_column_text(statement, 1));
-        const char *priorityText = reinterpret_cast<const char *>(sqlite3_column_text(statement, 2));
-        const char *timeText = reinterpret_cast<const char *>(sqlite3_column_text(statement, 3));
-
-        std::cout << "ID: " << id << "- Thing: " << entryText
-                  << " - Priority: " << priorityText << " - Time: " << timeText << std::endl;
-    }
-
-    sqlite3_finalize(statement);
-    sqlite3_close(db);
 }
 
 void DiaryApp::deleteEntry()
 {
-    sqlite3 *db;
-    int result = sqlite3_open(DB_FILE.c_str(), &db);
-
-    if (result != SQLITE_OK)
+    try
     {
-        std::cerr << "Error opening SQLite3 database: " << sqlite3_errmsg(db) << std::endl;
+        // 打开 SQLite 数据库
+        SQLite::Database db(DB_FILE, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
+
+        int entryId;
+        std::cout << "Enter the ID of the entry you want to delete:" << std::endl;
+        std::cin >> entryId;
+
+        // 准备 SQL 语句
+        std::string deleteSQL = "DELETE FROM diary_entries WHERE id = " + std::to_string(entryId) + ";";
+        db.exec(deleteSQL);
+
+        std::cout << "Entry with ID " << entryId << " deleted successfully." << std::endl;
+    }
+    catch (std::exception &e)
+    {
+        std::cerr << "删除日记时发生错误：" << e.what() << std::endl;
         exit(EXIT_FAILURE);
     }
-
-    int entryId;
-    std::cout << "Enter the ID of the entry you want to delete:" << std::endl;
-    std::cin >> entryId;
-
-    std::string deleteSQL = "DELETE FROM diary_entries WHERE id = " + std::to_string(entryId) + ";";
-    result = sqlite3_exec(db, deleteSQL.c_str(), nullptr, nullptr, nullptr);
-
-    if (result != SQLITE_OK)
-    {
-        std::cerr << "Error deleting entry: " << sqlite3_errmsg(db) << std::endl;
-        sqlite3_close(db);
-        exit(EXIT_FAILURE);
-    }
-
-    std::cout << "Entry with ID " << entryId << " deleted successfully." << std::endl;
-
-    sqlite3_close(db);
 }
 
 void DiaryApp::clearConsole()
