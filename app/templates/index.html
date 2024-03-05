@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DiaryApp Web Interface</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles/styles.css') }}">
 </head>
 <body>
     <div id="app">
@@ -12,16 +12,16 @@
         <div id="menu">
             <p>Choose an option:</p>
             <ul>
-                <li><a href="#" onclick="addEntry()">Add Diary Entry</a></li>
-                <li><a href="#" onclick="viewEntries()">View Diary Entries</a></li>
-                <li><a href="#" onclick="deleteEntry()">Delete Diary Entry</a></li>
-                <li><a href="#" onclick="clearEntries()">Clear</a></li>
-                <li><a href="#" onclick="deleteAllEntries()">Delete ALL</a></li>
-                <li><a href="#" onclick="restoreData()">Restore</a></li>
-                <li><a href="#" onclick="exitApp()">Exit</a></li>
+                <li><a href="#" id="addEntry">Add Diary Entry</a></li>
+                <li><a href="#" id="viewEntries">View Diary Entries</a></li>
+                <li><a href="#" id="deleteEntry">Delete Diary Entry</a></li>
+                <li><a href="#" id="clearEntries">Clear</a></li>
+                <li><a href="#" id="deleteAllEntries">Delete ALL</a></li>
+                <li><a href="#" id="restoreData">Restore</a></li>
+                <li><a href="#" id="exitApp">Exit</a></li>
             </ul>
         </div>
     </div>
-    <script src="app.js"></script>
+    <script src="{{ url_for('static', filename='scripts/app.js') }}"></script>
 </body>
 </html>
